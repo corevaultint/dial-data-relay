@@ -1,3 +1,4 @@
+
 """Daily market data collector for the direction dial project.
  
 Runs on GitHub Actions (unrestricted network). Two modes, picked by ET hour
@@ -193,13 +194,20 @@ def stooq_spx():
  
  
 def stooq_quotes():
-    syms = ["spy.us", "qqq.us", "^vix", "^spx", "aapl.us", "msft.us", "nvda.us",
-            "amzn.us", "googl.us", "meta.us", "avgo.us", "tsla.us", "brk-b.us", "jpm.us"]
-    try:
-        r = get(f"https://stooq.com/q/l/?s={'+'.join(syms)}&f=sd2t2ohlcv&e=csv")
-        save(f"snapshots/{TODAY}/premarket_quotes_{NOW.strftime('%H%M')}ET.csv", r.text)
-    except Exception as e:
-        log_fail("stooq:quotes", e)
+    """Premarket quote snapshot. Caret symbols 404 on this endpoint from
+    Actions IPs; plain tickers only, both hosts, accept whatever CSV we get.
+    Known-fragile: Stooq blocks datacenter IPs intermittently."""
+    syms = ["spy.us", "qqq.us", "aapl.us", "msft.us", "nvda.us", "amzn.us",
+            "googl.us", "meta.us", "avgo.us", "tsla.us", "brk-b.us", "jpm.us"]
+    for host in ("stooq.com", "stooq.pl"):
+        try:
+            r = get(f"https://{host}/q/l/?s={'+'.join(syms)}&f=sd2t2ohlcv&e=csv")
+            if r.text.lstrip()[:1] != "<" and "," in r.text:
+                save(f"snapshots/{TODAY}/premarket_quotes_{NOW.strftime('%H%M')}ET.csv", r.text)
+                return
+        except Exception:
+            continue
+    log_fail("stooq:quotes", "both hosts refused (datacenter-IP block, known-fragile)")
  
  
 def av_news_sentiment():
@@ -207,16 +215,27 @@ def av_news_sentiment():
     if not key:
         log_fail("alphavantage", "AV_API_KEY secret not set")
         return
-    for label, params in [
+    import time
+    for i, (label, params) in enumerate([
         ("spy", {"tickers": "SPY", "limit": "200"}),
         ("macro", {"topics": "economy_macro,financial_markets", "limit": "200"}),
-    ]:
+    ]):
         try:
-            r = get("https://www.alphavantage.co/query",
-                    params={"function": "NEWS_SENTIMENT", "apikey": key,
-                            "sort": "LATEST", **params})
-            j = r.json()
-            if "feed" not in j:
+            if i:
+                time.sleep(20)   # AV free tier throttles bursts
+            j = None
+            for attempt in range(2):
+                r = get("https://www.alphavantage.co/query",
+                        params={"function": "NEWS_SENTIMENT", "apikey": key,
+                                "sort": "LATEST", **params})
+                j = r.json()
+                if "feed" in j:
+                    break
+                if "Information" in j or "Note" in j:
+                    time.sleep(25)   # throttle message: wait and retry once
+                    continue
+                break
+            if not j or "feed" not in j:
                 raise ValueError(str(j)[:200])
             save(f"snapshots/{TODAY}/av_news_{label}.json", json.dumps(j))
             scores = [float(a["overall_sentiment_score"]) for a in j["feed"]
