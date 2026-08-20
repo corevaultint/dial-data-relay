@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SPX Direction Dials</title>
+<style>
+  :root { color-scheme: light dark; }
+  .viz-root {
+    color-scheme: light;
+    --surface-1: #fcfcfb; --page: #f9f9f7; --ink-1: #0b0b0b; --ink-2: #52514e;
+    --ink-muted: #898781; --grid: #e1e0d9; --baseline: #c3c2b7;
+    --border: rgba(11,11,11,0.10); --rise: #0ca30c; --fall: #d03b3b;
+    --neutral-band: #f0efec; --accent: #2a78d6; --warn: #fab219; --badge-ink: #7a5800;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) .viz-root {
+      color-scheme: dark;
+      --surface-1: #1a1a19; --page: #0d0d0d; --ink-1: #ffffff; --ink-2: #c3c2b7;
+      --ink-muted: #898781; --grid: #2c2c2a; --baseline: #383835;
+      --border: rgba(255,255,255,0.10); --neutral-band: #383835;
+      --accent: #3987e5; --badge-ink: #fab219;
+    }
+  }
+  :root[data-theme="dark"] .viz-root {
+    color-scheme: dark;
+    --surface-1: #1a1a19; --page: #0d0d0d; --ink-1: #ffffff; --ink-2: #c3c2b7;
+    --ink-muted: #898781; --grid: #2c2c2a; --baseline: #383835;
+    --border: rgba(255,255,255,0.10); --neutral-band: #383835;
+    --accent: #3987e5; --badge-ink: #fab219;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .viz-root { background: var(--page); color: var(--ink-1); min-height: 100vh; padding: 20px; }
+  .wrap { max-width: 1060px; margin: 0 auto; }
+  header { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 4px; }
+  h1 { font-size: 20px; font-weight: 650; }
+  .meta { font-size: 12px; color: var(--ink-muted); margin-left: auto; }
+  .toggle { font-size: 11px; color: var(--ink-2); background: var(--surface-1);
+    border: 1px solid var(--border); border-radius: 6px; padding: 4px 9px; cursor: pointer; }
+  .subhead { font-size: 12px; color: var(--ink-muted); margin-bottom: 16px; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 14px; }
+  @media (max-width: 900px) { .grid3 { grid-template-columns: 1fr; } }
+  .card { background: var(--surface-1); border: 1px solid var(--border);
+    border-radius: 12px; padding: 15px 15px 12px; display: flex; flex-direction: column; }
+  .card-head { display: flex; align-items: baseline; justify-content: space-between; }
+  .card-title { font-size: 13px; font-weight: 700; }
+  .card-sub { font-size: 11px; color: var(--ink-muted); }
+  .gauge-wrap { display: flex; flex-direction: column; align-items: center; padding: 4px 0 0; }
+  .score { font-size: 30px; font-weight: 700; line-height: 1; margin-top: 6px; font-variant-numeric: tabular-nums; }
+  .score-label { font-size: 11.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin-top: 4px; }
+  .contrib { margin-top: 10px; border-top: 1px solid var(--grid); padding-top: 8px; }
+  .crow { display: grid; grid-template-columns: 1fr auto auto; align-items: baseline; gap: 8px; padding: 2.5px 0; }
+  .cname { font-size: 12px; color: var(--ink-2); }
+  .cval { font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
+  .cdate { font-size: 10px; color: var(--ink-muted); font-variant-numeric: tabular-nums; }
+  .stale { color: var(--warn); font-weight: 700; }
+  .missing { color: var(--ink-muted); font-style: italic; }
+  .hitrates { margin-top: 10px; border-top: 1px solid var(--grid); padding-top: 8px; }
+  .hr-title { font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-muted); margin-bottom: 5px; }
+  .hr-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; text-align: center; }
+  .hr-cell { font-size: 11px; padding: 4px 2px; border-radius: 5px; background: var(--neutral-band); }
+  .hr-cell b { display: block; font-size: 12px; font-variant-numeric: tabular-nums; }
+  .spark-section { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 14px; }
+  .spark-title { font-size: 12.5px; font-weight: 700; margin-bottom: 8px; }
+  footer { margin-top: 14px; font-size: 11px; color: var(--ink-muted); line-height: 1.5; }
+  .notes { font-size: 11px; color: var(--badge-ink); margin-bottom: 10px; }
+  svg text { font-family: system-ui, sans-serif; }
+</style>
+</head>
+<body>
+<div class="viz-root" id="root">
+  <div class="wrap">
+    <header>
+      <h1>SPX Direction Dials</h1>
+      <span class="meta">Built <strong id="gen"></strong> · auto-updates 8:00 / 9:45 / 17:30 ET weekdays</span>
+      <button class="toggle" onclick="toggleTheme()">Light / Dark</button>
+    </header>
+    <div class="subhead">Sentiment aggregation from live data. Descriptive, not predictive. Historical hit rates shown under the session dial are from the 2021-2026 walk-forward test.</div>
+    <div class="notes" id="notes"></div>
+    <div class="grid3" id="cards"></div>
+    <div class="spark-section">
+      <div class="spark-title">Dial history (most recent 90 builds)</div>
+      <div id="spark"></div>
+    </div>
+    <footer>
+      Scores run -100 (fall tilt) to +100 (rise tilt), percentile-ranked against 2016-2026 history.
+      A yellow date means that input is stale; an italic line means it is missing from today's build.
+      Data: CNN Fear &amp; Greed, Alpha Vantage news sentiment, CBOE, FRED, Stooq, weekly breadth refresh.
+      This page summarizes public sentiment data. It is not trade advice and has not demonstrated predictive edge.
+    </footer>
+  </div>
+</div>
+<script>
+const PAYLOAD = {"generated": "2026-08-20 13:19 ET", "dials": {"session": {"score": 20.8, "parts": [{"label": "Overnight gap", "score": null, "as_of": null, "stale": true}, {"label": "Prior close location", "score": null, "as_of": null, "stale": true}, {"label": "Prior VIX change", "score": null, "as_of": null, "stale": true}, {"label": "Breadth (seed)", "score": 0.02, "as_of": "2026-08-19", "stale": false}, {"label": "Highs-lows (seed)", "score": 0.08, "as_of": "2026-08-19", "stale": false}], "hitrates": {"note": "quartile up-frequencies from the 2021-2026 walk-forward test (session-at-open validation, 2026-08-20)", "buckets": {"-100..-50": 0.467, "-50..0": 0.532, "0..50": 0.545, "50..100": 0.562}, "oos_base_up": 0.537}}, "mood": {"score": 26.0, "parts": [{"label": "Fear & Greed", "score": 9.9, "as_of": "2026-08-20", "stale": false}, {"label": "News sentiment", "score": 42.1, "as_of": "2026-08-20", "stale": false}, {"label": "VIX term structure", "score": null, "as_of": "08/19/2026", "stale": false}, {"label": "Equity put/call", "score": null, "as_of": null, "stale": true}]}, "tape": {"score": 0.3, "parts": [{"label": "Breadth vs 20/50 MA", "score": -18.1, "as_of": "2026-08-19", "stale": false}, {"label": "52wk highs-lows", "score": -2.7, "as_of": "2026-08-19", "stale": false}, {"label": "AAII bull-bear (contrarian)", "score": 21.8, "as_of": "2026-08-19", "stale": false}]}}, "notes": [], "history": [{"date": "2026-08-20", "time_et": "1319", "session": "20.8", "mood": "26.0", "tape": "0.3"}]};
+
+function cssVar(n) { return getComputedStyle(document.getElementById('root')).getPropertyValue(n).trim(); }
+function toggleTheme() {
+  const r = document.documentElement;
+  const dark = getComputedStyle(document.getElementById('root')).colorScheme.includes('dark');
+  r.setAttribute('data-theme', dark ? 'light' : 'dark');
+  render();
+}
+function mix(c1, c2, t) {
+  const p = h => { h = h.replace('#',''); return [0,2,4].map(i => parseInt(h.substr(i,2),16)); };
+  const [r1,g1,b1] = p(c1), [r2,g2,b2] = p(c2);
+  const m = (a,b) => Math.round(a + (b-a)*t);
+  return `rgb(${m(r1,r2)},${m(g1,g2)},${m(b1,b2)})`;
+}
+function gaugeSVG(score) {
+  const W = 250, H = 128, cx = W/2, cy = 112, R = 86, TH = 12;
+  const a = d => (d - 180) * Math.PI / 180;
+  const pt = (deg, r) => [cx + r*Math.cos(a(deg)), cy + r*Math.sin(a(deg))];
+  const arc = (d0, d1, r) => {
+    const [x0,y0] = pt(d0,r), [x1,y1] = pt(d1,r);
+    return `M ${x0.toFixed(1)} ${y0.toFixed(1)} A ${r} ${r} 0 0 1 ${x1.toFixed(1)} ${y1.toFixed(1)}`;
+  };
+  const fall = cssVar('--fall'), rise = cssVar('--rise'), band = cssVar('--neutral-band'),
+        inkM = cssVar('--ink-muted'), ink = cssVar('--ink-1');
+  let segs = '';
+  const N = 44;
+  for (let i = 0; i < N; i++) {
+    const t = (i + 0.5) / N;
+    const color = t < 0.5 ? mix(fall, band, t*2) : mix(band, rise, (t-0.5)*2);
+    segs += `<path d="${arc(i*180/N, Math.min((i+1)*180/N + 0.6, 180), R)}" stroke="${color}" stroke-width="${TH}" fill="none"/>`;
+  }
+  const ticks = [[-100,0],[0,90],[100,180]].map(([v,d]) => {
+    const [lx,ly] = pt(d, R+20);
+    return `<text x="${lx.toFixed(1)}" y="${(ly+3).toFixed(1)}" text-anchor="middle" font-size="9" fill="${inkM}">${v>0?'+':''}${v}</text>`;
+  }).join('');
+  let needle = '';
+  if (score !== null && score !== undefined) {
+    const deg = 90 + score * 90 / 100;
+    const [nx, ny] = pt(deg, R - TH/2 - 4);
+    needle = `<line x1="${cx}" y1="${cy}" x2="${nx.toFixed(1)}" y2="${ny.toFixed(1)}" stroke="${ink}" stroke-width="2.5" stroke-linecap="round"/>
+      <circle cx="${cx}" cy="${cy}" r="5" fill="${ink}"/>`;
+  }
+  return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${segs}${ticks}${needle}</svg>`;
+}
+function scoreColor(s) {
+  if (s === null || s === undefined) return cssVar('--ink-muted');
+  return s >= 25 ? cssVar('--rise') : s <= -25 ? cssVar('--fall') : cssVar('--ink-muted');
+}
+function scoreWord(s) {
+  if (s === null || s === undefined) return 'NO DATA';
+  if (s >= 50) return 'RISE TILT, STRONG'; if (s >= 25) return 'RISE TILT';
+  if (s <= -50) return 'FALL TILT, STRONG'; if (s <= -25) return 'FALL TILT';
+  return 'NEUTRAL';
+}
+function partRow(p) {
+  const val = p.score === null || p.score === undefined
+    ? '<span class="missing">no data</span>'
+    : (p.score > 0 ? '+' : '') + p.score;
+  const dateCls = p.stale ? 'cdate stale' : 'cdate';
+  return `<div class="crow"><span class="cname">${p.label}</span>
+    <span class="cval">${val}</span>
+    <span class="${dateCls}">${p.as_of || ''}${p.stale && p.as_of ? ' !' : ''}</span></div>`;
+}
+function card(title, sub, dial, extra) {
+  return `<div class="card">
+    <div class="card-head"><span class="card-title">${title}</span><span class="card-sub">${sub}</span></div>
+    <div class="gauge-wrap">${gaugeSVG(dial.score)}
+      <div class="score" style="color:${scoreColor(dial.score)}">${dial.score === null || dial.score === undefined ? '--' : (dial.score > 0 ? '+' : '') + dial.score}</div>
+      <div class="score-label" style="color:${scoreColor(dial.score)}">${scoreWord(dial.score)}</div>
+    </div>
+    <div class="contrib">${dial.parts.map(partRow).join('')}</div>
+    ${extra || ''}</div>`;
+}
+function hitrateBlock(hr) {
+  const cells = Object.entries(hr.buckets).map(([k, v]) =>
+    `<div class="hr-cell">${k}<b>${Math.round(v*1000)/10}%</b></div>`).join('');
+  return `<div class="hitrates"><div class="hr-title">Historical up-frequency by dial quartile (base ${Math.round(hr.oos_base_up*1000)/10}%)</div>
+    <div class="hr-grid">${cells}</div></div>`;
+}
+function sparkSVG(history) {
+  const daily = history.filter(h => h.session !== '' && h.session !== 'None');
+  if (daily.length < 2) return '<span style="font-size:11px;color:' + cssVar('--ink-muted') + '">History accumulates from here. Check back in a week.</span>';
+  const W = 1000, H = 90, PAD = 6;
+  const x = i => PAD + i * (W - 2*PAD) / (daily.length - 1);
+  const y = v => H/2 - (parseFloat(v) || 0) * (H/2 - PAD) / 100;
+  const lines = [['session', cssVar('--accent')], ['mood', cssVar('--rise')], ['tape', cssVar('--ink-muted')]]
+    .map(([k, c]) => {
+      const pts = daily.map((h, i) => `${i ? 'L' : 'M'} ${x(i).toFixed(1)} ${y(h[k]).toFixed(1)}`).join(' ');
+      return `<path d="${pts}" stroke="${c}" stroke-width="2" fill="none" stroke-linejoin="round"/>`;
+    }).join('');
+  return `<svg width="100%" height="${H}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+    <line x1="0" y1="${H/2}" x2="${W}" y2="${H/2}" stroke="${cssVar('--baseline')}" stroke-width="1"/>${lines}</svg>
+    <div style="font-size:10.5px;color:${cssVar('--ink-muted')};margin-top:4px">blue session · green mood · gray tape</div>`;
+}
+function render() {
+  const d = PAYLOAD.dials;
+  document.getElementById('gen').textContent = PAYLOAD.generated;
+  document.getElementById('notes').textContent = (PAYLOAD.notes || []).join(' · ');
+  document.getElementById('cards').innerHTML =
+    card('SESSION TONE', 'at the open, today', d.session, hitrateBlock(d.session.hitrates)) +
+    card('MARKET MOOD', 'news + fear gauges', d.mood) +
+    card('TAPE', 'breadth + surveys', d.tape);
+  document.getElementById('spark').innerHTML = sparkSVG(PAYLOAD.history || []);
+}
+render();
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', render);
+</script>
+</body>
+</html>
