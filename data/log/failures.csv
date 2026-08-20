@@ -1,0 +1,7 @@
+timestamp,source,error
+2026-08-20T12:45:55-04:00,fred:VIXCLS,"HTTPSConnectionPool(host='fred.stlouisfed.org', port=443): Read timed out. (read timeout=30)"
+2026-08-20T12:45:55-04:00,fred:BAMLH0A0HYM2,"HTTPSConnectionPool(host='fred.stlouisfed.org', port=443): Read timed out. (read timeout=30)"
+2026-08-20T12:45:55-04:00,fred:SP500,"HTTPSConnectionPool(host='fred.stlouisfed.org', port=443): Read timed out. (read timeout=30)"
+2026-08-20T12:45:55-04:00,cboe:putcall,all candidate endpoints failed
+2026-08-20T12:45:55-04:00,stooq:spx,"payload not CSV: '<!DOCTYPE html><html><head><meta charset=""utf-8""><meta name='"
+2026-08-20T12:45:55-04:00,naaim,number not found on page (layout may have changed)
