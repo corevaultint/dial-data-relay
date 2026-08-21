@@ -3,7 +3,7 @@ name: collect-market-data
 on:
   schedule:
     # Cron is UTC. 12:00 UTC = 8:00am EDT / 7:00am EST (both pre-market).
-    - cron: '0 12 * * 1-5'
+    - cron: '7 12 * * 1-5'
     # 13:45 UTC = 9:45am EDT (8:45am EST in winter; both work, quote is delayed anyway).
     - cron: '45 13 * * 1-5'
     # 21:30 UTC = 5:30pm EDT / 4:30pm EST (both after the close).
