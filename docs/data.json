@@ -1,13 +1,13 @@
 {
- "generated": "2026-08-25 10:29 ET",
+ "generated": "2026-08-26 10:27 ET",
  "dials": {
   "session": {
-   "score": 7.6,
+   "score": 36.0,
    "parts": [
     {
      "label": "Overnight gap",
-     "score": -0.22,
-     "as_of": "2026-08-25",
+     "score": 0.43,
+     "as_of": "2026-08-26",
      "stale": false
     },
     {
@@ -47,12 +47,12 @@
    }
   },
   "mood": {
-   "score": 29.8,
+   "score": 28.7,
    "parts": [
     {
      "label": "Fear & Greed",
-     "score": 17.5,
-     "as_of": "2026-08-25",
+     "score": 15.3,
+     "as_of": "2026-08-26",
      "stale": false
     },
     {
@@ -65,7 +65,7 @@
      "label": "VIX term structure",
      "score": null,
      "as_of": "08/19/2026",
-     "stale": false
+     "stale": true
     },
     {
      "label": "Equity put/call",
@@ -141,6 +141,13 @@
    "time_et": "1029",
    "session": "7.6",
    "mood": "29.8",
+   "tape": "0.3"
+  },
+  {
+   "date": "2026-08-26",
+   "time_et": "1027",
+   "session": "36.0",
+   "mood": "28.7",
    "tape": "0.3"
   }
  ]
