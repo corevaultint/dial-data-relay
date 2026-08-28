@@ -1,14 +1,14 @@
 {
- "generated": "2026-08-26 10:27 ET",
+ "generated": "2026-08-28 00:28 ET",
  "dials": {
   "session": {
-   "score": 36.0,
+   "score": 20.8,
    "parts": [
     {
      "label": "Overnight gap",
-     "score": 0.43,
-     "as_of": "2026-08-26",
-     "stale": false
+     "score": null,
+     "as_of": null,
+     "stale": true
     },
     {
      "label": "Prior close location",
@@ -47,19 +47,19 @@
    }
   },
   "mood": {
-   "score": 28.7,
+   "score": 46.6,
    "parts": [
     {
      "label": "Fear & Greed",
-     "score": 15.3,
-     "as_of": "2026-08-26",
+     "score": 15.8,
+     "as_of": "2026-08-28",
      "stale": false
     },
     {
      "label": "News sentiment",
-     "score": 42.1,
-     "as_of": "2026-08-20",
-     "stale": true
+     "score": 77.5,
+     "as_of": "2026-08-28",
+     "stale": false
     },
     {
      "label": "VIX term structure",
@@ -148,6 +148,13 @@
    "time_et": "1027",
    "session": "36.0",
    "mood": "28.7",
+   "tape": "0.3"
+  },
+  {
+   "date": "2026-08-28",
+   "time_et": "0028",
+   "session": "20.8",
+   "mood": "46.6",
    "tape": "0.3"
   }
  ]
