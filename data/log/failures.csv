@@ -9,3 +9,4 @@ timestamp,source,error
 2026-08-20T13:04:03-04:00,alphavantage:macro,{'Information': 'Thank you for using Alpha Vantage! Please consider spreading out your free API requests more sparingly (1 request per second). You may subscribe to any of the premium plans at https:/
 2026-08-28T00:27:55-04:00,stooq:quotes,"both hosts refused (datacenter-IP block, known-fragile)"
 2026-08-31T08:08:52-04:00,stooq:quotes,"both hosts refused (datacenter-IP block, known-fragile)"
+2026-09-01T08:20:07-04:00,stooq:quotes,"both hosts refused (datacenter-IP block, known-fragile)"
