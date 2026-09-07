@@ -1,14 +1,14 @@
 {
- "generated": "2026-09-07 08:21 ET",
+ "generated": "2026-09-07 09:52 ET",
  "dials": {
   "session": {
-   "score": 20.8,
+   "score": 5.6,
    "parts": [
     {
      "label": "Overnight gap",
-     "score": null,
-     "as_of": null,
-     "stale": true
+     "score": -0.26,
+     "as_of": "2026-09-07",
+     "stale": false
     },
     {
      "label": "Prior close location",
@@ -231,6 +231,13 @@
    "date": "2026-09-07",
    "time_et": "0821",
    "session": "20.8",
+   "mood": "37.1",
+   "tape": "0.3"
+  },
+  {
+   "date": "2026-09-07",
+   "time_et": "0952",
+   "session": "5.6",
    "mood": "37.1",
    "tape": "0.3"
   }
