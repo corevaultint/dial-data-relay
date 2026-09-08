@@ -35,27 +35,70 @@ def read_universe(path):
         return list(csv.DictReader(f))
 
 
-def fetch_yahoo(sym, session, tries=4):
-    """One symbol from Yahoo's chart endpoint. Returns (days, high, low, close, volume) or None."""
+MIN_BARS = 260
+
+
+def pack_bars(days, h, l, c, v):
+    """Drop bars with a missing price and return the 5 arrays the studies use."""
+    rows = [(d, hh, ll, cc, vv) for d, hh, ll, cc, vv in zip(days, h, l, c, v)
+            if cc is not None and hh is not None and ll is not None
+            and not (isinstance(cc, float) and math.isnan(cc))]
+    if len(rows) < MIN_BARS:
+        return None
+    days, h, l, c, v = (np.array(x, dtype=float) for x in zip(*rows))
+    return days.astype(int), np.round(h, 2), np.round(l, 2), np.round(c, 2), np.nan_to_num(v)
+
+
+def fetch_yfinance(symbols, chunk=50):
+    """Bulk download through the yfinance library, which handles Yahoo's
+    cookie-and-crumb handshake and its rate limits (a raw request from a cloud
+    machine gets throttled). Returns {symbol: bars} for what came back."""
+    import yfinance as yf
+    import pandas as pd
+    out = {}
+    for i in range(0, len(symbols), chunk):
+        batch = symbols[i:i + chunk]
+        ymap = {s.replace('.', '-'): s for s in batch}
+        try:
+            df = yf.download(list(ymap), period='2y', interval='1d', auto_adjust=False,
+                             group_by='ticker', threads=True, progress=False, timeout=20)
+        except Exception as e:
+            print(f'  yfinance batch {i // chunk + 1} failed: {type(e).__name__}: {e}', flush=True)
+            continue
+        if df is None or df.empty:
+            print(f'  yfinance batch {i // chunk + 1} returned nothing', flush=True)
+            continue
+        for ysym, sym in ymap.items():
+            try:
+                d = df[ysym] if isinstance(df.columns, pd.MultiIndex) else df
+                d = d.dropna(subset=['Close'])
+                if len(d) < MIN_BARS:
+                    continue
+                days = [int(t.toordinal() - dt.date(1970, 1, 1).toordinal()) for t in d.index.date]
+                bars = pack_bars(days, d['High'].tolist(), d['Low'].tolist(), d['Close'].tolist(), d['Volume'].tolist())
+                if bars is not None:
+                    out[sym] = bars
+            except Exception:
+                pass
+        print(f'  fetched {len(out)}/{i + len(batch)} so far', flush=True)
+    return out
+
+
+def fetch_yahoo(sym, session, tries=2):
+    """Fallback: one symbol straight from Yahoo's chart endpoint. Short timeouts,
+    two tries, no long sleeps, so a throttled runner fails fast instead of hanging."""
     ysym = sym.replace('.', '-')
     for attempt in range(tries):
         try:
-            r = session.get(YAHOO.format(sym=ysym), headers={'User-Agent': UA}, timeout=20)
-            if r.status_code == 429:
-                time.sleep(3 * (attempt + 1)); continue
-            j = r.json()
-            res = j['chart']['result'][0]
-            ts = res['timestamp']
+            r = session.get(YAHOO.format(sym=ysym), headers={'User-Agent': UA}, timeout=10)
+            if r.status_code != 200:
+                time.sleep(1.0); continue
+            res = r.json()['chart']['result'][0]
             q = res['indicators']['quote'][0]
-            days = [int((t + 4 * 3600) // 86400) for t in ts]     # shift so the day never straddles UTC midnight
-            rows = [(d, h, l, c, v) for d, h, l, c, v in zip(days, q['high'], q['low'], q['close'], q['volume'])
-                    if c is not None and h is not None and l is not None]
-            if len(rows) < 260:
-                return None
-            days, h, l, c, v = (np.array(x, dtype=float) for x in zip(*rows))
-            return days.astype(int), np.round(h, 2), np.round(l, 2), np.round(c, 2), np.nan_to_num(v)
+            days = [int((t + 4 * 3600) // 86400) for t in res['timestamp']]   # shift so the day never straddles UTC midnight
+            return pack_bars(days, q['high'], q['low'], q['close'], q['volume'])
         except Exception:
-            time.sleep(1.5 * (attempt + 1))
+            time.sleep(1.0)
     return None
 
 
@@ -166,29 +209,58 @@ def add_rs_rank(records):
 
 # ------------------------------------------------------------------ main --
 
-def build(universe_path, out_paths, bars_dir=None, data_path=None, template_path=None, pause=0.15):
-    universe = read_universe(universe_path)
-    records, failures = [], []
-    session = None
-    if bars_dir is None:
+MAX_FAIL_SHARE = 0.15   # above this the run is declared broken and nothing is written
+
+
+def load_all_bars(universe, bars_dir=None):
+    """{symbol: bars} for the whole universe. Cached CSVs if bars_dir is given,
+    otherwise a bulk yfinance download with a per-symbol fallback."""
+    symbols = [m['symbol'] for m in universe]
+    bars = {}
+    if bars_dir:
+        for sym in symbols:
+            p = os.path.join(bars_dir, sym + '.csv')
+            if os.path.exists(p):
+                bars[sym] = read_bars_csv(p)
+        return bars
+    t0 = time.time()
+    print(f'fetching {len(symbols)} symbols through yfinance', flush=True)
+    try:
+        bars = fetch_yfinance(symbols)
+    except ImportError:
+        print('  yfinance is not installed (pip install yfinance); using the raw endpoint only', flush=True)
+    missing = [s for s in symbols if s not in bars]
+    if missing:
+        print(f'  {len(missing)} missing after yfinance, trying the raw endpoint: {missing[:20]}{" ..." if len(missing) > 20 else ""}', flush=True)
         import requests
         session = requests.Session()
+        for sym in missing:
+            b = fetch_yahoo(sym, session)
+            if b is not None:
+                bars[sym] = b
+            time.sleep(0.2)
+    print(f'  bars for {len(bars)}/{len(symbols)} symbols in {time.time() - t0:.0f}s', flush=True)
+    return bars
+
+
+def build(universe_path, out_paths, bars_dir=None, data_path=None, template_path=None):
+    universe = read_universe(universe_path)
+    records, failures = [], []
+    bars = load_all_bars(universe, bars_dir)
     for i, meta in enumerate(universe):
         sym = meta['symbol']
+        if sym not in bars:
+            failures.append(sym); continue
         try:
-            if bars_dir:
-                p = os.path.join(bars_dir, sym + '.csv')
-                bars = read_bars_csv(p) if os.path.exists(p) else None
-            else:
-                bars = fetch_yahoo(sym, session)
-                time.sleep(pause)
-            if bars is None:
-                failures.append(sym); continue
-            records.append(compute_record(meta, *bars))
+            records.append(compute_record(meta, *bars[sym]))
         except Exception as e:  # keep going, report at the end
             failures.append(f'{sym} ({type(e).__name__}: {e})')
         if (i + 1) % 50 == 0:
-            print(f'  {i + 1}/{len(universe)} done', flush=True)
+            print(f'  {i + 1}/{len(universe)} computed', flush=True)
+    if len(failures) > MAX_FAIL_SHARE * len(universe):
+        print(f'ABORT: {len(failures)} of {len(universe)} symbols failed, the last good page is left in place. '
+              f'Failed: {failures}', flush=True)
+        sys.exit(2)
     add_rs_rank(records)
     asof = max((r['asof'] for r in records), default=None)
     payload = {
