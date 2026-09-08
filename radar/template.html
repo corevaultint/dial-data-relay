@@ -1,0 +1,504 @@
+<title>Nova Radar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  /* One committed look: a dark trading desk. Every colour is set here so the page
+     holds on any host background. */
+  :root {
+    --ground: #0b0f17;
+    --panel: #121826;
+    --panel-2: #182033;
+    --line: #232c3d;
+    --line-strong: #2f3a50;
+    --text: #e6eaf2;
+    --muted: #8b95a7;
+    --dim: #5b6577;
+    --accent: #f2b441;          /* amber: controls and group headers */
+    --accent-ink: #1a1305;
+    --up: #35c48a;
+    --up-soft: rgba(53, 196, 138, 0.14);
+    --down: #e5636e;
+    --down-soft: rgba(229, 99, 110, 0.14);
+    --sqz: #e0902a;
+    --sqz-soft: rgba(224, 144, 42, 0.16);
+    --info: #5eb3f6;
+    --info-soft: rgba(94, 179, 246, 0.14);
+    --sans: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+    --cond: "IBM Plex Sans Condensed", "Arial Narrow", Arial, sans-serif;
+    --mono: "IBM Plex Mono", "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html { color-scheme: dark; }
+  body { margin: 0; background: var(--ground); color: var(--text); font: 14px/1.4 var(--sans); }
+  button, input, select { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+  /* ---------- top bar ---------- */
+  .top { position: sticky; top: 0; z-index: 20; background: var(--ground); border-bottom: 1px solid var(--line); }
+  .top-inner { display: flex; align-items: center; gap: 14px; padding: 10px 18px; flex-wrap: wrap; }
+  .brand { display: flex; align-items: baseline; gap: 10px; }
+  .brand h1 { margin: 0; font: 600 20px/1 var(--cond); letter-spacing: 0.02em; }
+  .brand .asof { color: var(--muted); font: 500 12px/1 var(--mono); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--up); display: inline-block; margin-left: 6px; vertical-align: middle; }
+  .spacer { flex: 1; }
+  .search { background: var(--panel); border: 1px solid var(--line-strong); border-radius: 6px; padding: 7px 10px; width: 180px; }
+  .search::placeholder { color: var(--dim); }
+  .btn { background: var(--panel); border: 1px solid var(--line-strong); border-radius: 6px; padding: 7px 12px; color: var(--text); }
+  .btn:hover { border-color: var(--accent); }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+  .btn .count { background: var(--accent); color: var(--accent-ink); border-radius: 10px; padding: 0 7px; margin-left: 6px; font: 600 11px/18px var(--mono); }
+  .presets { display: flex; gap: 6px; flex-wrap: wrap; }
+  .preset { background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; color: var(--muted); font-size: 12px; }
+  .preset:hover, .preset.on { border-color: var(--accent); color: var(--text); }
+
+  /* ---------- summary strip ---------- */
+  .strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 1px; background: var(--line); border-bottom: 1px solid var(--line); }
+  .tile { background: var(--ground); padding: 10px 18px; }
+  .tile .k { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; }
+  .tile .v { font: 500 22px/1.2 var(--mono); margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .tile .v.up { color: var(--up); } .tile .v.down { color: var(--down); } .tile .v.sqz { color: var(--sqz); }
+
+  /* ---------- table ---------- */
+  .wrap { padding: 0 18px 60px; }
+  /* On narrow screens the table scrolls sideways inside its own box; the sticky
+     column header is switched off there because a scroll box would push it down. */
+  @media (max-width: 1240px) { .wrap { overflow-x: auto; } thead th { position: static !important; } }
+  table { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 1180px; font-variant-numeric: tabular-nums; }
+  thead th { position: sticky; top: var(--topH, 56px); z-index: 10; background: var(--ground); color: var(--muted); font: 500 11px/1.2 var(--sans); text-transform: uppercase; letter-spacing: 0.06em; text-align: right; padding: 10px 8px; border-bottom: 1px solid var(--line-strong); white-space: nowrap; cursor: pointer; user-select: none; }
+  thead th:first-child, thead th.left { text-align: left; }
+  thead th.sorted { color: var(--text); }
+  thead th .arrow { display: inline-block; width: 0.9em; color: var(--accent); }
+  tbody td { padding: 7px 8px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; font-family: var(--mono); font-size: 13px; }
+  tbody td.left { text-align: left; font-family: var(--sans); }
+  tr.group th { text-align: left; padding: 9px 8px; background: var(--panel); color: var(--accent); font: 600 12px/1 var(--cond); letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; border-top: 1px solid var(--line-strong); border-bottom: 1px solid var(--line-strong); }
+  tr.group th .n { color: var(--muted); font-family: var(--mono); font-weight: 400; letter-spacing: 0; text-transform: none; margin-left: 8px; }
+  tr.group th .n em { color: var(--dim); font-style: normal; }
+  tr.group th .tri { display: inline-block; width: 14px; color: var(--accent); }
+  tr.group.closed th .tri { transform: rotate(-90deg); }
+  tr.sym:hover td { background: var(--panel); }
+  tr.sym td.sym { font: 600 13px/1 var(--sans); }
+  tr.sym td.sym button { background: none; border: 0; padding: 0; color: var(--text); font: inherit; letter-spacing: 0.02em; }
+  tr.sym td.sym button:hover { color: var(--accent); }
+  td.spark svg { display: block; }
+  .chg.up { color: var(--up); } .chg.down { color: var(--down); }
+  .chip { display: inline-block; border-radius: 999px; padding: 2px 8px; font: 500 11px/16px var(--mono); border: 1px solid transparent; }
+  .chip.sqz { background: var(--sqz-soft); color: var(--sqz); border-color: rgba(224,144,42,0.35); }
+  .chip.fl { background: var(--up-soft); color: var(--up); border-color: rgba(53,196,138,0.35); }
+  .chip.fs { background: var(--down-soft); color: var(--down); border-color: rgba(229,99,110,0.35); }
+  .chip.pos { background: var(--up-soft); color: var(--up); }
+  .chip.neg { background: var(--down-soft); color: var(--down); }
+  .chip.mix { background: var(--panel-2); color: var(--muted); }
+  .chip.info { background: var(--info-soft); color: var(--info); }
+  .chip.dim { color: var(--dim); }
+  .mom.pos { color: var(--up); } .mom.neg { color: var(--down); }
+  .mom .d { font-size: 10px; margin-left: 2px; }
+  .none { color: var(--dim); }
+  .ev { display: inline-flex; gap: 4px; justify-content: flex-end; }
+  .ev .tag { font: 500 10px/14px var(--mono); padding: 1px 5px; border-radius: 3px; background: var(--panel-2); color: var(--muted); border: 1px solid var(--line-strong); }
+  .ev .tag.up { color: var(--up); border-color: rgba(53,196,138,0.4); }
+  .ev .tag.down { color: var(--down); border-color: rgba(229,99,110,0.4); }
+  .ev .tag.vol { color: var(--accent); border-color: rgba(242,180,65,0.4); }
+  .raf.hot { color: var(--up); } .raf.cold { color: var(--down); }
+  .bar { display: inline-block; width: 46px; height: 6px; background: var(--panel-2); border-radius: 3px; vertical-align: middle; margin-right: 6px; overflow: hidden; }
+  .bar i { display: block; height: 100%; background: var(--info); }
+  tr.detail td { background: var(--panel); border-bottom: 1px solid var(--line-strong); padding: 12px 16px 14px; text-align: left; font-family: var(--sans); white-space: normal; }
+  .dgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 8px 22px; }
+  .dgrid div { display: flex; justify-content: space-between; gap: 10px; border-bottom: 1px dotted var(--line-strong); padding: 3px 0; }
+  .dgrid span:first-child { color: var(--muted); }
+  .dgrid span:last-child { font-family: var(--mono); }
+  .dname { color: var(--muted); margin-bottom: 8px; }
+  .dname b { color: var(--text); }
+  .empty { padding: 40px; text-align: center; color: var(--muted); }
+
+  /* ---------- filter drawer ---------- */
+  .scrim { position: fixed; inset: 0; background: rgba(4, 6, 12, 0.55); z-index: 30; }
+  .drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(440px, 100vw); background: var(--panel); border-left: 1px solid var(--line-strong); z-index: 31; display: flex; flex-direction: column; }
+  .drawer header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--line); }
+  .drawer header h2 { margin: 0; font: 600 16px/1 var(--cond); letter-spacing: 0.04em; }
+  .drawer .body { overflow-y: auto; padding: 6px 18px 18px; flex: 1; }
+  .drawer footer { display: flex; gap: 8px; justify-content: flex-end; padding: 12px 18px; border-top: 1px solid var(--line); }
+  fieldset { border: 0; padding: 12px 0; margin: 0; border-bottom: 1px solid var(--line); }
+  fieldset:last-child { border-bottom: 0; }
+  legend { padding: 0; color: var(--accent); font: 600 11px/1 var(--cond); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; }
+  .row { display: flex; align-items: center; gap: 8px; margin: 6px 0; flex-wrap: wrap; }
+  .row label { color: var(--muted); min-width: 118px; font-size: 13px; }
+  .row select, .row input[type=number] { background: var(--ground); border: 1px solid var(--line-strong); border-radius: 5px; padding: 5px 8px; }
+  .row input[type=number] { width: 78px; font-family: var(--mono); }
+  .row .unit { color: var(--dim); font-size: 12px; }
+  .seg { display: inline-flex; border: 1px solid var(--line-strong); border-radius: 6px; overflow: hidden; }
+  .seg button { background: transparent; border: 0; padding: 5px 10px; color: var(--muted); font-size: 12px; border-right: 1px solid var(--line-strong); }
+  .seg button:last-child { border-right: 0; }
+  .seg button.on { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+  .hint { color: var(--dim); font-size: 12px; margin: 4px 0 0; }
+  .foot { color: var(--dim); font-size: 12px; padding: 14px 18px; border-top: 1px solid var(--line); }
+  .foot b { color: var(--muted); font-weight: 500; }
+  @media (max-width: 720px) {
+    .top-inner { padding: 8px 12px; } .wrap { padding: 0 8px 40px; } .search { width: 130px; }
+  }
+</style>
+
+<div class="top">
+  <div class="top-inner">
+    <div class="brand">
+      <h1>Nova Radar<span class="dot" title="Data as of the last close"></span></h1>
+      <span class="asof" id="asof"></span>
+    </div>
+    <div class="presets" id="presets"></div>
+    <div class="spacer"></div>
+    <input class="search" id="search" type="search" placeholder="Symbol or name" aria-label="Search symbol or name">
+    <button class="btn" id="openFilters">Filters<span class="count" id="filterCount" hidden>0</span></button>
+  </div>
+</div>
+
+<div class="strip" id="strip"></div>
+
+<div class="wrap">
+  <table id="table">
+    <thead><tr id="head"></tr></thead>
+    <tbody id="body"></tbody>
+  </table>
+  <div class="empty" id="empty" hidden>Nothing matches these filters.</div>
+</div>
+
+<div class="foot" id="foot"></div>
+
+<div id="drawerHost" hidden>
+  <div class="scrim" id="scrim"></div>
+  <aside class="drawer" role="dialog" aria-label="Filters">
+    <header><h2>Filters</h2><button class="btn" id="closeFilters">Close</button></header>
+    <div class="body" id="filterBody"></div>
+    <footer><button class="btn" id="clearFilters">Clear all</button><button class="btn primary" id="applyFilters">Apply</button></footer>
+  </aside>
+</div>
+
+<script>
+// ============================================================ data =====
+// The builder replaces the placeholder below with the computed table.
+const DATA = /*__RADAR_DATA__*/null;
+
+// ========================================================= columns =====
+// Each column: key for sorting, label, how to read the value, how to draw it.
+const fmt = {
+  num: (v, d = 2) => v == null ? '<span class="none">–</span>' : Number(v).toFixed(d),
+  pct: (v, d = 1) => v == null ? '<span class="none">–</span>' : Number(v).toFixed(d) + '%',
+};
+function sqzChip(s) {
+  if (s.state === 'in') return `<span class="chip sqz">Sqz ${-s.bars}</span>`;
+  if (s.state === 'fired_long') return `<span class="chip fl">Fired ▲ ${s.bars}</span>`;
+  if (s.state === 'fired_short') return `<span class="chip fs">Fired ▼ ${s.bars}</span>`;
+  return '<span class="none">–</span>';
+}
+function sqzSort(s) {  // in-squeeze first (deepest first), then fired, then none
+  if (s.state === 'in') return 1000 - s.bars;
+  if (s.state.startsWith('fired')) return 500 - s.bars;
+  return 0;
+}
+function spark(vals) {
+  const w = 84, h = 22, p = 2;
+  const xs = vals.filter(v => v != null);
+  if (xs.length < 2) return '';
+  const min = Math.min(...xs), max = Math.max(...xs), span = (max - min) || 1;
+  const pts = xs.map((v, i) => [p + i * (w - 2 * p) / (xs.length - 1), p + (h - 2 * p) * (1 - (v - min) / span)]);
+  const up = xs[xs.length - 1] >= xs[0];
+  const col = up ? 'var(--up)' : 'var(--down)';
+  const d = pts.map(q => q.map(n => n.toFixed(1)).join(',')).join(' ');
+  const last = pts[pts.length - 1];
+  const area = `M${pts[0][0].toFixed(1)},${h} L${d.replace(/ /g, ' L')} L${last[0].toFixed(1)},${h} Z`;
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true"><path d="${area}" fill="${col}" opacity="0.12"/><polyline points="${d}" fill="none" stroke="${col}" stroke-width="1.2"/><circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="1.8" fill="${col}"/></svg>`;
+}
+function events(r) {
+  const t = [];
+  if (r.div_bull_bars >= 0 && r.div_bull_bars <= 2) t.push(`<span class="tag up" title="Bullish divergent bar, ${r.div_bull_bars} bars ago">DB▲${r.div_bull_bars}</span>`);
+  if (r.div_bear_bars >= 0 && r.div_bear_bars <= 2) t.push(`<span class="tag down" title="Bearish divergent bar, ${r.div_bear_bars} bars ago">DB▼${r.div_bear_bars}</span>`);
+  if (r.holb_bars >= 0 && r.holb_bars <= 2) t.push(`<span class="tag up" title="Close crossed above the high of the lowest bar (21-bar window), ${r.holb_bars} bars ago">HOLB${r.holb_bars ? ' ' + r.holb_bars : ''}</span>`);
+  if (r.lohb_bars >= 0 && r.lohb_bars <= 2) t.push(`<span class="tag down" title="Close crossed below the low of the highest bar (21-bar window), ${r.lohb_bars} bars ago">LOHB${r.lohb_bars ? ' ' + r.lohb_bars : ''}</span>`);
+  if (r.px_cross !== 'none' && r.px_cross_bars <= 3) t.push(`<span class="tag ${r.px_cross === 'bull' ? 'up' : 'down'}" title="8/21 EMA ${r.px_cross} cross, ${r.px_cross_bars} bars ago">8/21${r.px_cross === 'bull' ? '▲' : '▼'}${r.px_cross_bars}</span>`);
+  if (r.vol_surge) t.push(`<span class="tag vol" title="Volume ${r.vol_ratio}x the 20-day average">VOL ${r.vol_ratio}x</span>`);
+  if (r.moxie_cross !== 'none') t.push(`<span class="tag ${r.moxie_cross === 'bull' ? 'up' : 'down'}" title="Moxie crossed ${r.moxie_cross === 'bull' ? 'above' : 'below'} zero this week">MOX${r.moxie_cross === 'bull' ? '▲' : '▼'}</span>`);
+  return t.length ? `<span class="ev">${t.join('')}</span>` : '<span class="none">–</span>';
+}
+const COLS = [
+  { key: 'symbol', label: 'Symbol', left: true, val: r => r.symbol, cell: r => `<td class="left sym"><button data-sym="${r.symbol}" title="${r.name.replace(/"/g, '&quot;')}">${r.symbol}</button></td>` },
+  { key: 'spark', label: '', left: true, val: r => r.chg_pct, cell: r => `<td class="left spark">${spark(r.spark)}</td>` },
+  { key: 'close', label: 'Close', val: r => r.close, cell: r => `<td>${fmt.num(r.close)}</td>` },
+  { key: 'chg_pct', label: '%Chg', val: r => r.chg_pct, cell: r => `<td class="chg ${r.chg_pct > 0 ? 'up' : r.chg_pct < 0 ? 'down' : ''}">${r.chg_pct > 0 ? '+' : ''}${fmt.pct(r.chg_pct, 2)}</td>` },
+  { key: 'sqz_low', label: 'Sqz Low', val: r => sqzSort(r.sqz.low), cell: r => `<td>${sqzChip(r.sqz.low)}</td>` },
+  { key: 'sqz_mid', label: 'Sqz Mid', val: r => sqzSort(r.sqz.mid), cell: r => `<td>${sqzChip(r.sqz.mid)}</td>` },
+  { key: 'sqz_high', label: 'Sqz High', val: r => sqzSort(r.sqz.high), cell: r => `<td>${sqzChip(r.sqz.high)}</td>` },
+  { key: 'momentum', label: 'Momentum', val: r => r.momentum, cell: r => `<td class="mom ${r.momentum > 0 ? 'pos' : 'neg'}" title="Squeeze momentum, ${r.mom_dir === 'up' ? 'rising' : 'falling'} bar over bar">${fmt.num(r.momentum, 2)}<span class="d">${r.mom_dir === 'up' ? '▲' : '▼'}</span></td>` },
+  { key: 'ema_stack', label: 'EMA', val: r => ({ POS: 2, MIX: 1, NEG: 0 })[r.ema_stack], cell: r => `<td><span class="chip ${r.ema_stack.toLowerCase()}" title="8 / 21 / 34 / 55 EMA stack">${r.ema_stack}</span></td>` },
+  { key: 'pct_52w', label: '52W %', val: r => r.pct_52w, cell: r => `<td><span class="bar"><i style="width:${Math.max(0, Math.min(100, r.pct_52w || 0))}%"></i></span>${fmt.pct(r.pct_52w, 0)}</td>` },
+  { key: 'rs_rank', label: 'RS', val: r => r.rs_rank, cell: r => `<td title="Relative strength rank within this list (IBD-style score)">${fmt.num(r.rs_rank, 0)}</td>` },
+  { key: 'raf', label: 'RAF', val: r => r.raf, cell: r => `<td class="raf ${r.raf <= -1.2 ? 'cold' : r.raf >= 1.2 ? 'hot' : ''}" title="RAF oscillator, turn ${r.raf_turn}">${fmt.num(r.raf, 2)}${r.raf_buy ? ' <span class="chip fl">BUY</span>' : r.raf_sell ? ' <span class="chip fs">SELL</span>' : r.raf_turn === 'up' ? ' <span class="chip info">▲</span>' : r.raf_turn === 'down' ? ' <span class="chip info">▼</span>' : ''}</td>` },
+  { key: 'moxie', label: 'Moxie', val: r => r.moxie, cell: r => `<td class="mom ${r.moxie > 0 ? 'pos' : 'neg'}" title="Weekly MACD histogram; prior week ${r.moxie_prior}">${fmt.num(r.moxie, 2)}</td>` },
+  { key: 'atr_trend', label: 'ATR', val: r => r.atr_trend, cell: r => `<td><span class="chip ${r.atr_trend > 0 ? 'pos' : 'neg'}" title="1.75 x ATR(14) ratchet stop at ${r.atr_stop}, ${r.atr_trend_bars} bars in this direction">${r.atr_trend > 0 ? 'Long' : 'Short'} ${r.atr_trend_bars}</span></td>` },
+  { key: 'events', label: 'Events', val: r => 0, cell: r => `<td>${events(r)}</td>` },
+  { key: 'avg_dollar_vol_m', label: '$Vol M', val: r => r.avg_dollar_vol_m, cell: r => `<td title="20-day average dollar volume, millions">${fmt.num(r.avg_dollar_vol_m, 0)}</td>` },
+];
+
+// ========================================================= filters =====
+const DEFAULT = {
+  sqzLevel: 'any', sqzState: 'any', minSqueezes: 0, firedWithin: 0,
+  mom: 'any', ema: { POS: true, MIX: true, NEG: true },
+  pct52Min: '', pct52Max: '', rsMin: '',
+  raf: 'any', moxie: 'any', atr: 'any',
+  divBull: 0, divBear: 0, holb: 0, lohb: 0, pxCross: 'any', pxWithin: 3, volSurge: false,
+  minPrice: '', minDollarVol: '', within21d: '',
+};
+let F = { ...DEFAULT };
+let search = '';
+let sortKey = 'symbol', sortDir = 1;
+let closedGroups = {};
+let openDetail = null;
+let activePreset = null;
+
+const PRESETS = {
+  'In squeeze': { sqzState: 'in' },
+  'Fired long today': { sqzState: 'fired_long', firedWithin: 1 },
+  'Fired short today': { sqzState: 'fired_short', firedWithin: 1 },
+  'RAF buy': { raf: 'buy' },
+  'Mid-range buy': { raf: 'turn_up', minSqueezes: 1 },
+  'Leaders': { ema: { POS: true, MIX: false, NEG: false }, pct52Min: 80, rsMin: 70 },
+  'Breakdowns': { ema: { POS: false, MIX: false, NEG: true }, atr: 'short' },
+};
+
+function sqzMatch(r) {
+  const levels = F.sqzLevel === 'any' ? ['low', 'mid', 'high'] : [F.sqzLevel];
+  if (F.sqzState === 'any') return true;
+  if (F.sqzState === 'not_in') return levels.every(l => r.sqz[l].state !== 'in');
+  return levels.some(l => {
+    const s = r.sqz[l];
+    if (F.sqzState === 'in') return s.state === 'in';
+    if (F.sqzState === 'fired') return s.state.startsWith('fired') && (!F.firedWithin || s.bars <= F.firedWithin);
+    return s.state === F.sqzState && (!F.firedWithin || s.bars <= F.firedWithin);
+  });
+}
+function passes(r) {
+  if (search) {
+    const q = search.toLowerCase();
+    if (!r.symbol.toLowerCase().includes(q) && !r.name.toLowerCase().includes(q)) return false;
+  }
+  if (!sqzMatch(r)) return false;
+  if (F.minSqueezes && r.num_squeezes < F.minSqueezes) return false;
+  if (F.mom !== 'any') {
+    const pos = r.momentum > 0, rising = r.mom_dir === 'up';
+    const ok = { pos, neg: !pos, rising, falling: !rising, pos_rising: pos && rising, neg_falling: !pos && !rising }[F.mom];
+    if (!ok) return false;
+  }
+  if (!F.ema[r.ema_stack]) return false;
+  if (F.pct52Min !== '' && !(r.pct_52w >= +F.pct52Min)) return false;
+  if (F.pct52Max !== '' && !(r.pct_52w <= +F.pct52Max)) return false;
+  if (F.rsMin !== '' && !(r.rs_rank >= +F.rsMin)) return false;
+  if (F.raf !== 'any') {
+    const ok = { turn_up: r.raf_turn === 'up', turn_down: r.raf_turn === 'down', buy: r.raf_buy, sell: r.raf_sell,
+                 oversold: r.raf <= -1.2, overbought: r.raf >= 1.2 }[F.raf];
+    if (!ok) return false;
+  }
+  if (F.moxie !== 'any') {
+    const ok = { pos: r.moxie > 0, neg: r.moxie < 0, cross_bull: r.moxie_cross === 'bull', cross_bear: r.moxie_cross === 'bear',
+                 rising: r.moxie > r.moxie_prior, falling: r.moxie < r.moxie_prior }[F.moxie];
+    if (!ok) return false;
+  }
+  if (F.atr === 'long' && r.atr_trend < 0) return false;
+  if (F.atr === 'short' && r.atr_trend > 0) return false;
+  if (F.divBull && !(r.div_bull_bars >= 0 && r.div_bull_bars < F.divBull)) return false;
+  if (F.divBear && !(r.div_bear_bars >= 0 && r.div_bear_bars < F.divBear)) return false;
+  if (F.holb && !(r.holb_bars >= 0 && r.holb_bars < F.holb)) return false;
+  if (F.lohb && !(r.lohb_bars >= 0 && r.lohb_bars < F.lohb)) return false;
+  if (F.pxCross !== 'any' && !(r.px_cross === F.pxCross && r.px_cross_bars <= +F.pxWithin)) return false;
+  if (F.volSurge && !r.vol_surge) return false;
+  if (F.minPrice !== '' && !(r.close >= +F.minPrice)) return false;
+  if (F.minDollarVol !== '' && !(r.avg_dollar_vol_m >= +F.minDollarVol)) return false;
+  if (F.within21d !== '' && !(r.from_21d_high >= -Math.abs(+F.within21d))) return false;
+  return true;
+}
+function activeFilterCount() {
+  let n = 0;
+  for (const k of Object.keys(DEFAULT)) {
+    if (k === 'ema') { if (!(F.ema.POS && F.ema.MIX && F.ema.NEG)) n++; continue; }
+    if (k === 'pxWithin' || k === 'firedWithin') continue;
+    if (String(F[k]) !== String(DEFAULT[k])) n++;
+  }
+  return n;
+}
+
+// ========================================================== render =====
+const $ = s => document.querySelector(s);
+function render() {
+  const rows = DATA.symbols;
+  const col = COLS.find(c => c.key === sortKey) || COLS[0];
+  const cmp = (a, b) => {
+    const va = col.val(a), vb = col.val(b);
+    if (va == null && vb == null) return 0; if (va == null) return 1; if (vb == null) return -1;
+    return (va < vb ? -1 : va > vb ? 1 : 0) * sortDir || a.symbol.localeCompare(b.symbol);
+  };
+  // header
+  $('#head').innerHTML = COLS.map(c => `<th class="${c.left ? 'left ' : ''}${c.key === sortKey ? 'sorted' : ''}" data-key="${c.key}">${c.label}${c.key === sortKey ? `<span class="arrow">${sortDir > 0 ? '▲' : '▼'}</span>` : c.label ? '<span class="arrow"></span>' : ''}</th>`).join('');
+  // body, grouped
+  let html = '', shown = 0, hidden = 0;
+  const stats = { sqz: 0, fl: 0, fs: 0, buy: 0, sell: 0, pos: 0, neg: 0 };
+  for (const g of DATA.groups) {
+    const all = rows.filter(r => r.group === g);
+    const vis = all.filter(passes).sort(cmp);
+    shown += vis.length; hidden += all.length - vis.length;
+    if (!vis.length) continue;
+    for (const r of vis) {
+      if (r.num_squeezes) stats.sqz++;
+      if (r.fired_dir === 'long' && r.fired_bars === 1) stats.fl++;
+      if (r.fired_dir === 'short' && r.fired_bars === 1) stats.fs++;
+      if (r.raf_buy) stats.buy++; if (r.raf_sell) stats.sell++;
+      if (r.ema_stack === 'POS') stats.pos++; if (r.ema_stack === 'NEG') stats.neg++;
+    }
+    const closed = !!closedGroups[g];
+    html += `<tr class="group ${closed ? 'closed' : ''}" data-group="${g}"><th colspan="${COLS.length}"><span class="tri">▼</span>${g}<span class="n">${vis.length}${all.length - vis.length ? ` <em>• ${all.length - vis.length} hidden</em>` : ''}</span></th></tr>`;
+    if (closed) continue;
+    for (const r of vis) {
+      html += `<tr class="sym" data-sym="${r.symbol}">${COLS.map(c => c.cell(r)).join('')}</tr>`;
+      if (openDetail === r.symbol) html += detailRow(r);
+    }
+  }
+  $('#body').innerHTML = html;
+  $('#empty').hidden = shown > 0;
+  const tiles = [
+    ['Shown', shown, ''], ['Hidden', hidden, ''], ['In squeeze', stats.sqz, 'sqz'], ['Fired ▲ today', stats.fl, 'up'], ['Fired ▼ today', stats.fs, 'down'],
+    ['RAF buys', stats.buy, 'up'], ['RAF sells', stats.sell, 'down'],
+    ['Stacked POS', shown ? Math.round(100 * stats.pos / shown) + '%' : '–', 'up'], ['Stacked NEG', shown ? Math.round(100 * stats.neg / shown) + '%' : '–', 'down'],
+  ];
+  $('#strip').innerHTML = tiles.map(([k, v, c]) => `<div class="tile"><div class="k">${k}</div><div class="v ${c}">${v}</div></div>`).join('');
+  const n = activeFilterCount();
+  $('#filterCount').hidden = n === 0; $('#filterCount').textContent = n;
+  document.querySelectorAll('.preset').forEach(b => b.classList.toggle('on', b.dataset.preset === activePreset));
+  try { localStorage.setItem('nova-radar', JSON.stringify({ F, sortKey, sortDir, closedGroups })); } catch (e) {}
+}
+function detailRow(r) {
+  const d = [
+    ['Sector', r.sector || '–'], ['Industry group', r.industry_group || '–'], ['Sector ETF', r.sector_etf || '–'],
+    ['Prior close', r.prev_close], ['Volume', r.volume.toLocaleString()], ['Vol / 20d avg', r.vol_ratio + 'x'],
+    ['EMA 8 / 21', `${r.ema['8']} / ${r.ema['21']}`], ['EMA 34 / 55', `${r.ema['34']} / ${r.ema['55']}`],
+    ['21-day range %', r.pct_21d + '%'], ['From 21D high', r.from_21d_high + '%'], ['From 52W high', r.from_52w_high + '%'],
+    ['Squeeze momentum', `${r.momentum} (prev ${r.momentum_prev})`], ['Compression levels', r.num_squeezes],
+    ['RAF / prior', `${r.raf} / ${r.raf_prev}`], ['Moxie / prior week', `${r.moxie} / ${r.moxie_prior}`],
+    ['ATR(14)', r.atr], ['ATR stop', `${r.atr_stop} (${r.atr_trend > 0 ? 'long' : 'short'}, ${r.atr_trend_bars} bars)`],
+    ['Divergent bar ▲ / ▼', `${r.div_bull_bars < 0 ? '–' : r.div_bull_bars} / ${r.div_bear_bars < 0 ? '–' : r.div_bear_bars} bars ago`],
+    ['HOLB / LOHB', `${r.holb_bars < 0 ? '–' : r.holb_bars} / ${r.lohb_bars < 0 ? '–' : r.lohb_bars} bars ago`],
+    ['8/21 cross', r.px_cross === 'none' ? '–' : `${r.px_cross}, ${r.px_cross_bars} bars ago`],
+    ['RS score / rank', `${r.rs_score} / ${r.rs_rank}`],
+  ];
+  return `<tr class="detail"><td colspan="${COLS.length}"><div class="dname"><b>${r.name}</b> · data through ${r.asof}</div><div class="dgrid">${d.map(([k, v]) => `<div><span>${k}</span><span>${v}</span></div>`).join('')}</div></td></tr>`;
+}
+
+// ========================================================== drawer =====
+function seg(name, options) {
+  return `<span class="seg" data-seg="${name}">${options.map(([v, l]) => `<button type="button" data-v="${v}" class="${String(F[name]) === String(v) ? 'on' : ''}">${l}</button>`).join('')}</span>`;
+}
+function numInput(name, unit, ph) {
+  return `<input type="number" data-num="${name}" value="${F[name]}" placeholder="${ph || ''}"><span class="unit">${unit || ''}</span>`;
+}
+function drawerHTML() {
+  return `
+  <fieldset><legend>Squeeze Pro</legend>
+    <div class="row"><label>Level</label>${seg('sqzLevel', [['any', 'Any'], ['low', 'Low'], ['mid', 'Mid'], ['high', 'High']])}</div>
+    <div class="row"><label>State</label>${seg('sqzState', [['any', 'Any'], ['in', 'In squeeze'], ['fired', 'Fired'], ['fired_long', 'Fired ▲'], ['fired_short', 'Fired ▼'], ['not_in', 'Not in']])}</div>
+    <div class="row"><label>Fired within</label>${numInput('firedWithin', 'bars (0 = any)')}</div>
+    <div class="row"><label>Compression levels ≥</label>${seg('minSqueezes', [[0, 'Any'], [1, '1'], [2, '2'], [3, '3']])}</div>
+    <div class="row"><label>Momentum</label>${seg('mom', [['any', 'Any'], ['pos', '+'], ['neg', '−'], ['rising', 'Rising'], ['falling', 'Falling'], ['pos_rising', '+ rising'], ['neg_falling', '− falling']])}</div>
+  </fieldset>
+  <fieldset><legend>Trend</legend>
+    <div class="row"><label>Stacked EMA</label><span class="seg">${['POS', 'MIX', 'NEG'].map(k => `<button type="button" data-ema="${k}" class="${F.ema[k] ? 'on' : ''}">${k}</button>`).join('')}</span></div>
+    <div class="row"><label>52W range %</label>${numInput('pct52Min', '', 'min')} ${numInput('pct52Max', '%', 'max')}</div>
+    <div class="row"><label>RS rank ≥</label>${numInput('rsMin', '(0 to 100, within this list)')}</div>
+    <div class="row"><label>ATR stop</label>${seg('atr', [['any', 'Any'], ['long', 'Long'], ['short', 'Short']])}</div>
+    <div class="row"><label>Moxie</label>${seg('moxie', [['any', 'Any'], ['pos', '+'], ['neg', '−'], ['rising', 'Rising'], ['falling', 'Falling'], ['cross_bull', 'Crossed ▲'], ['cross_bear', 'Crossed ▼']])}</div>
+  </fieldset>
+  <fieldset><legend>ReadyAimFire</legend>
+    <div class="row"><label>Signal</label>${seg('raf', [['any', 'Any'], ['turn_up', 'Turn ▲'], ['turn_down', 'Turn ▼'], ['buy', 'Oversold buy'], ['sell', 'Overbought sell'], ['oversold', '≤ −1.2'], ['overbought', '≥ +1.2']])}</div>
+  </fieldset>
+  <fieldset><legend>Events</legend>
+    <div class="row"><label>Divergent bar ▲ within</label>${numInput('divBull', 'bars (0 = off)')}</div>
+    <div class="row"><label>Divergent bar ▼ within</label>${numInput('divBear', 'bars (0 = off)')}</div>
+    <div class="row"><label>HOLB within</label>${numInput('holb', 'bars (0 = off)')}</div>
+    <div class="row"><label>LOHB within</label>${numInput('lohb', 'bars (0 = off)')}</div>
+    <div class="row"><label>8/21 EMA cross</label>${seg('pxCross', [['any', 'Any'], ['bull', 'Bull'], ['bear', 'Bear']])} within ${numInput('pxWithin', 'bars')}</div>
+    <div class="row"><label>Volume surge</label>${seg('volSurge', [[false, 'Any'], [true, '≥ 1.5x avg today']])}</div>
+  </fieldset>
+  <fieldset><legend>Liquidity and price</legend>
+    <div class="row"><label>Price ≥</label>${numInput('minPrice', '$')}</div>
+    <div class="row"><label>Avg $ volume ≥</label>${numInput('minDollarVol', '$M per day (20d)')}</div>
+    <div class="row"><label>Within</label>${numInput('within21d', '% of the 21-day high')}</div>
+  </fieldset>
+  <p class="hint">Filters combine with AND. Squeeze bars: a negative count is bars in the squeeze, a positive count is bars since it released. Divergent bar and HOLB/LOHB counts read 0 on the day they fire.</p>`;
+}
+let pending = null;  // edits live here until Apply
+function openDrawer() {
+  pending = JSON.parse(JSON.stringify(F));
+  const saved = F; F = pending;
+  $('#filterBody').innerHTML = drawerHTML();
+  F = saved;
+  $('#drawerHost').hidden = false;
+  $('#closeFilters').focus();
+}
+function closeDrawer() { $('#drawerHost').hidden = true; pending = null; }
+$('#filterBody').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.ema) { pending.ema[b.dataset.ema] = !pending.ema[b.dataset.ema]; b.classList.toggle('on'); return; }
+  const s = b.closest('[data-seg]'); if (!s) return;
+  let v = b.dataset.v; if (v === 'true') v = true; else if (v === 'false') v = false; else if (/^\d+$/.test(v)) v = +v;
+  pending[s.dataset.seg] = v;
+  s.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+});
+$('#filterBody').addEventListener('input', e => {
+  const i = e.target; if (!i.dataset.num) return;
+  const raw = i.value.trim();
+  pending[i.dataset.num] = raw === '' ? (typeof DEFAULT[i.dataset.num] === 'number' ? 0 : '') : +raw;
+});
+$('#applyFilters').addEventListener('click', () => { F = pending; activePreset = null; closeDrawer(); render(); });
+$('#clearFilters').addEventListener('click', () => { pending = JSON.parse(JSON.stringify(DEFAULT)); const s = F; F = pending; $('#filterBody').innerHTML = drawerHTML(); F = s; });
+$('#openFilters').addEventListener('click', openDrawer);
+$('#closeFilters').addEventListener('click', closeDrawer);
+$('#scrim').addEventListener('click', closeDrawer);
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#drawerHost').hidden) closeDrawer(); });
+
+// ========================================================== wiring =====
+$('#search').addEventListener('input', e => { search = e.target.value.trim(); render(); });
+$('#head').addEventListener('click', e => {
+  const th = e.target.closest('th'); if (!th || !th.dataset.key || th.dataset.key === 'spark' || th.dataset.key === 'events') return;
+  if (sortKey === th.dataset.key) sortDir = -sortDir; else { sortKey = th.dataset.key; sortDir = th.dataset.key === 'symbol' ? 1 : -1; }
+  render();
+});
+$('#body').addEventListener('click', e => {
+  const g = e.target.closest('tr.group');
+  if (g) { closedGroups[g.dataset.group] = !closedGroups[g.dataset.group]; render(); return; }
+  const b = e.target.closest('button[data-sym]');
+  if (b) { openDetail = openDetail === b.dataset.sym ? null : b.dataset.sym; render(); }
+});
+$('#presets').innerHTML = Object.keys(PRESETS).map(k => `<button class="preset" data-preset="${k}">${k}</button>`).join('') + '<button class="preset" data-preset="">Clear</button>';
+$('#presets').addEventListener('click', e => {
+  const b = e.target.closest('.preset'); if (!b) return;
+  const k = b.dataset.preset;
+  F = JSON.parse(JSON.stringify(DEFAULT));
+  if (k) Object.assign(F, JSON.parse(JSON.stringify(PRESETS[k])));
+  activePreset = k || null;
+  render();
+});
+
+// keep the column header just under the top bar, whatever height the bar wraps to
+const topBar = $('.top');
+const setTop = () => document.documentElement.style.setProperty('--topH', topBar.offsetHeight + 'px');
+setTop(); if (window.ResizeObserver) new ResizeObserver(setTop).observe(topBar); window.addEventListener('resize', setTop);
+
+// restore the last view
+try {
+  const s = JSON.parse(localStorage.getItem('nova-radar') || 'null');
+  if (s && s.F) { F = { ...DEFAULT, ...s.F, ema: { ...DEFAULT.ema, ...(s.F.ema || {}) } }; sortKey = s.sortKey || sortKey; sortDir = s.sortDir || sortDir; closedGroups = s.closedGroups || {}; }
+} catch (e) {}
+
+if (DATA) {
+  $('#asof').textContent = `close of ${DATA.asof} · ${DATA.count} symbols`;
+  $('#foot').innerHTML = `Built ${DATA.built_at} from Yahoo Finance daily bars. Studies are the formulas decoded from the Simpler Trading scanner: <b>Squeeze Pro</b> (BB 20/2 inside Keltner 20 at 2.0 / 1.5 / 1.0, Inertia-20 momentum), <b>RAF</b> (Fisher 17, signals at ±1.2), <b>Moxie</b> (weekly MACD 12/26/9 histogram), <b>Stacked EMA</b> (8/21/34/55), <b>ATR stop</b> (1.75 × Wilder ATR 14), <b>Divergent bars</b>, <b>HOLB/LOHB</b> (21 bars), <b>8/21 cross</b> and <b>1.5× volume</b>. RS rank is an IBD-style score ranked within this list.${DATA.failures.length ? ` <b>Not updated:</b> ${DATA.failures.join(', ')}.` : ''}`;
+  render();
+} else {
+  $('#empty').hidden = false; $('#empty').textContent = 'No data embedded. Run build_radar.py to produce the page.';
+}
+</script>
