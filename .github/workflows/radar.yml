@@ -15,6 +15,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 30      # a normal build takes 2 to 4 minutes; anything longer is a stall
     steps:
       - uses: actions/checkout@v4
 
@@ -22,7 +23,7 @@ jobs:
         with:
           python-version: '3.12'
 
-      - run: pip install numpy requests
+      - run: pip install numpy pandas requests yfinance
 
       # RADAR_OUT is where the page is published. docs/radar.html assumes the
       # Pages site serves from /docs. Change it if the dial dashboard lives elsewhere.
