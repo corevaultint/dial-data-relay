@@ -1,0 +1,40 @@
+# Copy this file to .github/workflows/radar.yml in the relay repo.
+#
+# Rebuilds the radar page after the close on weekdays and commits it.
+# 21:45 UTC = 17:45 ET in summer, 16:45 ET in winter. Both are after the 16:00 close.
+name: radar
+
+on:
+  schedule:
+    - cron: '45 21 * * 1-5'
+  workflow_dispatch:        # lets you run it by hand from the Actions tab
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - run: pip install numpy requests
+
+      # RADAR_OUT is where the page is published. docs/radar.html assumes the
+      # Pages site serves from /docs. Change it if the dial dashboard lives elsewhere.
+      - name: Build the radar
+        env:
+          RADAR_OUT: docs/radar.html
+        run: python radar/build_radar.py --out radar/radar.html --out "$RADAR_OUT"
+
+      - name: Commit the new page
+        run: |
+          git config user.name "radar-bot"
+          git config user.email "radar-bot@users.noreply.github.com"
+          git add -A radar docs || true
+          git diff --cached --quiet || git commit -m "radar: $(date -u +%Y-%m-%d)"
+          git push
