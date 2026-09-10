@@ -1,14 +1,14 @@
 {
- "generated": "2026-09-09 09:52 ET",
+ "generated": "2026-09-10 08:21 ET",
  "dials": {
   "session": {
-   "score": 5.9,
+   "score": 20.8,
    "parts": [
     {
      "label": "Overnight gap",
-     "score": -0.25,
-     "as_of": "2026-09-09",
-     "stale": false
+     "score": null,
+     "as_of": null,
+     "stale": true
     },
     {
      "label": "Prior close location",
@@ -47,18 +47,18 @@
    }
   },
   "mood": {
-   "score": 18.8,
+   "score": 19.4,
    "parts": [
     {
      "label": "Fear & Greed",
-     "score": -21.1,
-     "as_of": "2026-09-09",
+     "score": -27.5,
+     "as_of": "2026-09-10",
      "stale": false
     },
     {
      "label": "News sentiment",
-     "score": 58.8,
-     "as_of": "2026-09-09",
+     "score": 66.2,
+     "as_of": "2026-09-10",
      "stale": false
     },
     {
@@ -267,6 +267,13 @@
    "time_et": "0952",
    "session": "5.9",
    "mood": "18.8",
+   "tape": "0.3"
+  },
+  {
+   "date": "2026-09-10",
+   "time_et": "0821",
+   "session": "20.8",
+   "mood": "19.4",
    "tape": "0.3"
   }
  ]
