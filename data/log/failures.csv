@@ -17,3 +17,4 @@ timestamp,source,error
 2026-09-08T08:21:04-04:00,stooq:quotes,"both hosts refused (datacenter-IP block, known-fragile)"
 2026-09-09T08:20:27-04:00,stooq:quotes,"both hosts refused (datacenter-IP block, known-fragile)"
 2026-09-10T08:20:17-04:00,stooq:quotes,"both hosts refused (datacenter-IP block, known-fragile)"
+2026-09-11T08:20:39-04:00,stooq:quotes,"both hosts refused (datacenter-IP block, known-fragile)"
