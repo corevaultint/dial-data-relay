@@ -24,3 +24,8 @@ timestamp,source,error
 2026-09-17T08:20:08-04:00,stooq:quotes,"both hosts refused (datacenter-IP block, known-fragile)"
 2026-09-18T08:18:48-04:00,stooq:quotes,"both hosts refused (datacenter-IP block, known-fragile)"
 2026-09-21T08:18:32-04:00,stooq:quotes,"both hosts refused (datacenter-IP block, known-fragile)"
+2026-10-05T17:18:51-04:00,fred:VIXCLS,"HTTPSConnectionPool(host='fred.stlouisfed.org', port=443): Read timed out. (read timeout=90)"
+2026-10-05T17:18:51-04:00,fred:BAMLH0A0HYM2,"HTTPSConnectionPool(host='fred.stlouisfed.org', port=443): Read timed out. (read timeout=90)"
+2026-10-05T17:18:51-04:00,fred:SP500,"HTTPSConnectionPool(host='fred.stlouisfed.org', port=443): Read timed out. (read timeout=90)"
+2026-10-05T17:18:51-04:00,stooq:spx,both hosts refused or returned HTML; using AV fallback
+2026-10-05T17:18:51-04:00,naaim,number not found; raw page snapshotted for inspection

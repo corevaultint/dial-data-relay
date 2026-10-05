@@ -1,20 +1,20 @@
 {
- "generated": "2026-09-21 09:52 ET",
+ "generated": "2026-10-05 17:29 ET",
  "dials": {
   "session": {
-   "score": 21.0,
+   "score": -13.1,
    "parts": [
     {
      "label": "Overnight gap",
-     "score": 0.06,
-     "as_of": "2026-09-21",
-     "stale": false
-    },
-    {
-     "label": "Prior close location",
      "score": null,
      "as_of": null,
      "stale": true
+    },
+    {
+     "label": "Prior close location",
+     "score": -0.61,
+     "as_of": "2026-10-05",
+     "stale": false
     },
     {
      "label": "Prior VIX change",
@@ -47,31 +47,31 @@
    }
   },
   "mood": {
-   "score": 29.1,
+   "score": 62.1,
    "parts": [
     {
      "label": "Fear & Greed",
-     "score": -41.8,
-     "as_of": "2026-09-21",
+     "score": -13.7,
+     "as_of": "2026-10-05",
      "stale": false
     },
     {
      "label": "News sentiment",
      "score": 100,
      "as_of": "2026-09-21",
-     "stale": false
+     "stale": true
     },
     {
      "label": "VIX term structure",
      "score": null,
-     "as_of": "08/19/2026",
-     "stale": true
+     "as_of": "10/02/2026",
+     "stale": false
     },
     {
      "label": "Equity put/call",
-     "score": null,
-     "as_of": null,
-     "stale": true
+     "score": 100,
+     "as_of": "2026-10-05",
+     "stale": false
     }
    ]
   },
@@ -99,7 +99,9 @@
    ]
   }
  },
- "notes": [],
+ "notes": [
+  "no 9:45 quote; gap shown is from 2026-10-05"
+ ],
  "history": [
   {
    "date": "2026-08-20",
@@ -379,6 +381,13 @@
    "time_et": "0952",
    "session": "21.0",
    "mood": "29.1",
+   "tape": "0.3"
+  },
+  {
+   "date": "2026-10-05",
+   "time_et": "1729",
+   "session": "-13.1",
+   "mood": "62.1",
    "tape": "0.3"
   }
  ]
